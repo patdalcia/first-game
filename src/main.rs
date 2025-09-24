@@ -39,7 +39,20 @@ async fn main() {
             pos.y -= MOVEMENT_SPEED * dt;
         }
 
-        // TOUCH: set / update touch_target when user touches
+        if is_key_down(KeyCode::D) {
+            pos.x += MOVEMENT_SPEED * dt;
+        }
+        if is_key_down(KeyCode::A) {
+            pos.x -= MOVEMENT_SPEED * dt;
+        }
+        if is_key_down(KeyCode::S) {
+            pos.y += MOVEMENT_SPEED * dt;
+        }
+        if is_key_down(KeyCode::W) {
+            pos.y -= MOVEMENT_SPEED * dt;
+        }
+
+        // TOUCH: set update touch_target when user touches
         for touch in touches() {
             match touch.phase {
                 TouchPhase::Started | TouchPhase::Moved | TouchPhase::Stationary => {
@@ -66,24 +79,12 @@ async fn main() {
             "Use arrow keys or touch to move",
             20.0,
             20.0,
-            20.0,
+            30.0,
             DARKGRAY,
         );
 
         // draw the circle at its current position
-        draw_circle(pos.x, pos.y, 16.0, YELLOW);
-
-        // also draw touch marker(s) if you want
-        for touch in touches() {
-            let (fill_color, size) = match touch.phase {
-                TouchPhase::Started => (GREEN, 80.0),
-                TouchPhase::Stationary => (WHITE, 60.0),
-                TouchPhase::Moved => (YELLOW, 60.0),
-                TouchPhase::Ended => (BLUE, 80.0),
-                TouchPhase::Cancelled => (BLACK, 80.0),
-            };
-            draw_circle(touch.position.x, touch.position.y, size, fill_color);
-        }
+        draw_circle(pos.x, pos.y, 20.0, RED);
 
         next_frame().await;
     }
