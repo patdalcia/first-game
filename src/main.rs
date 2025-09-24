@@ -11,35 +11,69 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf)]
 async fn main() {
     const MOVEMENT_SPEED: f32 = 200.0;
-    // let the window initialize
+    // Wait until screen dims settle (if needed)
+    next_frame().await;
     next_frame().await;
 
-    // Wait one more frame so size updates
-    next_frame().await;
+    let mut pos = vec2(screen_width() / 2.0, screen_height() / 2.0);
 
-    let mut x = screen_width() / 2.0;
-    let mut y = screen_height() / 2.0;
+    // Optional: keep a touch target, or None if no touch
+    let mut touch_target: Option<Vec2> = None;
 
     loop {
         clear_background(BLACK);
 
-        let delta_time = get_frame_time();
+        let dt = get_frame_time();
+
+        // KEY MOVEMENT
         if is_key_down(KeyCode::Right) {
-            x += MOVEMENT_SPEED * delta_time;
+            pos.x += MOVEMENT_SPEED * dt;
         }
         if is_key_down(KeyCode::Left) {
-            x -= MOVEMENT_SPEED * delta_time;
+            pos.x -= MOVEMENT_SPEED * dt;
         }
         if is_key_down(KeyCode::Down) {
-            y += MOVEMENT_SPEED * delta_time;
+            pos.y += MOVEMENT_SPEED * dt;
         }
         if is_key_down(KeyCode::Up) {
-            y -= MOVEMENT_SPEED * delta_time;
+            pos.y -= MOVEMENT_SPEED * dt;
         }
 
-        x = clamp(x, 0.0, screen_width());
-        y = clamp(y, 0.0, screen_height());
+        // TOUCH: set / update touch_target when user touches
+        for touch in touches() {
+            match touch.phase {
+                TouchPhase::Started | TouchPhase::Moved | TouchPhase::Stationary => {
+                    touch_target = Some(vec2(touch.position.x, touch.position.y));
+                }
+                TouchPhase::Ended | TouchPhase::Cancelled => {
+                    // maybe clear the target when touch ends?
+                    touch_target = None;
+                }
+            }
+        }
 
+        // If there's a touch target, move towards it
+        if let Some(target) = touch_target {
+            // pos = pos.move_towards(target, speed * dt)
+            pos = pos.move_towards(target, MOVEMENT_SPEED * dt);
+        }
+
+        // Clamp so the circle stays in screen bounds
+        pos.x = pos.x.clamp(0.0, screen_width());
+        pos.y = pos.y.clamp(0.0, screen_height());
+
+        draw_text(
+            "Use arrow keys or touch to move",
+            20.0,
+            20.0,
+            20.0,
+            DARKGRAY,
+        );
+
+        // draw the circle at its current position
+        draw_circle(pos.x, pos.y, 16.0, YELLOW);
+
+        // also draw touch marker(s) if you want
         for touch in touches() {
             let (fill_color, size) = match touch.phase {
                 TouchPhase::Started => (GREEN, 80.0),
@@ -51,9 +85,6 @@ async fn main() {
             draw_circle(touch.position.x, touch.position.y, size, fill_color);
         }
 
-        draw_text("touch the screen!", 20.0, 20.0, 20.0, DARKGRAY);
-
-        draw_circle(x, y, 16.0, YELLOW);
-        next_frame().await
+        next_frame().await;
     }
 }
