@@ -324,9 +324,14 @@ async fn main() {
                     let scr_h = screen_height();
                     let btn_size = scr_w * 0.2;
 
-                    let left_btn = Rect::new(0.0, scr_h - btn_size, btn_size, btn_size);
-                    let right_btn =
-                        Rect::new(scr_w - btn_size, scr_h - btn_size, btn_size, btn_size);
+                    let left_btn =
+                        Rect::new(0.0, scr_h - btn_size, (scr_w / 2.) - btn_size, btn_size);
+                    let right_btn = Rect::new(
+                        scr_w - ((scr_w / 2.) - btn_size),
+                        scr_h - btn_size,
+                        (scr_w / 2.) - btn_size,
+                        btn_size,
+                    );
                     let thrust_btn = Rect::new(
                         (scr_w - btn_size) / 2.0,
                         scr_h - btn_size,
@@ -401,7 +406,7 @@ async fn main() {
                     );
 
                     // Fire label
-                    let fire_label = "⦿ Fire";
+                    let fire_label = "Tap anywhere to FIRE";
                     let fs = screen_width().max(screen_height()) * 0.025;
                     let ts = measure_text(fire_label, None, fs as u16, 1.0);
                     draw_text(
