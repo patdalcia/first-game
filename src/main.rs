@@ -93,14 +93,13 @@ fn conf() -> Conf {
 
 #[macroquad::main(conf)]
 async fn main() {
-    // Allow screen to settle
+    // Let the screen stabilize
     for _ in 0..3 {
         next_frame().await;
     }
 
     let (mut ship, mut bullets, mut asteroids, mut last_shot) = new_game();
     let mut game_state = GameState::StartMenu;
-    // default, but will be set once user chooses
     let mut control_mode = ControlMode::Keyboard;
 
     loop {
@@ -110,34 +109,30 @@ async fn main() {
 
                 let prompt =
                     "Press [Enter] to play with keyboard\nor tap screen to play with touch";
-                let welcome_message = "Asteroids - Lovingly cloned by patdalcia <3";
+                let welcome_message = "Asteroids";
                 let fs = 30.0;
-                let ts = measure_text(prompt, None, fs as _, 1.0);
-                let ts2 = measure_text(welcome_message, None, fs as _, 1.0);
-                // We can draw it centered roughly
+                let ts_w = measure_text(welcome_message, None, fs as _, 1.0);
+                let ts_p = measure_text(prompt, None, fs as _, 1.0);
                 draw_text(
                     welcome_message,
-                    screen_width() / 2.0 - ts2.width / 2.0,
-                    screen_height() / 2.0 - ts2.height / 2.0,
+                    screen_width() / 2.0 - ts_w.width / 2.0,
+                    screen_height() / 2.0 - ts_w.height / 2.0 - 20.0,
                     fs,
                     DARKGRAY,
                 );
                 draw_text(
                     prompt,
-                    screen_width() / 2.0 - ts.width / 2.0,
-                    (screen_height() / 2.0 - ts.height / 2.0) + 30.,
+                    screen_width() / 2.0 - ts_p.width / 2.0,
+                    screen_height() / 2.0 + 20.0,
                     fs,
                     DARKGRAY,
                 );
 
-                // If Enter pressed → keyboard mode
                 if is_key_pressed(KeyCode::Enter) {
                     control_mode = ControlMode::Keyboard;
                     game_state = GameState::Playing;
                 }
-                // If any touch → touch mode
-                let tlist = touches();
-                if !tlist.is_empty() {
+                if !touches().is_empty() {
                     control_mode = ControlMode::Touch;
                     game_state = GameState::Playing;
                 }
@@ -149,7 +144,6 @@ async fn main() {
                 let now = get_time();
                 let mut acc = -ship.vel / 100.0;
 
-                // Input handling
                 match control_mode {
                     ControlMode::Keyboard => {
                         if is_key_down(KeyCode::Left) {
@@ -174,9 +168,7 @@ async fn main() {
                             last_shot = now;
                         }
                     }
-
                     ControlMode::Touch => {
-                        // Define touch button regions
                         let scr_w = screen_width();
                         let scr_h = screen_height();
                         let btn_size = scr_w * 0.2;
@@ -199,7 +191,6 @@ async fn main() {
                             fire_h,
                         );
 
-                        // Detect touch / mouse hold
                         let mut touch_pos_opt: Option<Vec2> = None;
                         let mut touch_phase_opt: Option<TouchPhase> = None;
 
@@ -213,54 +204,52 @@ async fn main() {
                         }
 
                         if let Some(p) = touch_pos_opt {
-                            // While held, rotate / thrust
                             if left_btn.contains(p) {
                                 ship.rot -= 3.0;
                             } else if right_btn.contains(p) {
                                 ship.rot += 3.0;
                             } else if thrust_btn.contains(p) {
                                 let ang = ship.rot.to_radians();
-                                acc = vec2(ang.sin(), -ang.cos());
+                                // scaled-down thrust for touch mode
+                                acc = vec2(ang.sin(), -ang.cos()) * 1.0;
                             }
 
-                            // Fire only on *new* press
-                            if let Some(phase) = touch_phase_opt
-                                && phase == TouchPhase::Started
-                                && fire_btn.contains(p)
-                            {
-                                if now - last_shot > 0.5 {
-                                    let ang = ship.rot.to_radians();
-                                    let dir = vec2(ang.sin(), -ang.cos());
-                                    bullets.push(Bullet {
-                                        pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
-                                        vel: dir * 7.0,
-                                        shot_at: now,
-                                        collided: false,
-                                    });
-                                    last_shot = now;
+                            if let Some(phase) = touch_phase_opt {
+                                if phase == TouchPhase::Started && fire_btn.contains(p) {
+                                    if now - last_shot > 0.5 {
+                                        let ang = ship.rot.to_radians();
+                                        let dir = vec2(ang.sin(), -ang.cos());
+                                        bullets.push(Bullet {
+                                            pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
+                                            vel: dir * 7.0,
+                                            shot_at: now,
+                                            collided: false,
+                                        });
+                                        last_shot = now;
+                                    }
                                 }
                             } else {
-                                // Fallback for mouse: detect click
                                 if is_mouse_button_pressed(MouseButton::Left)
                                     && fire_btn.contains(p)
-                                    && now - last_shot > 0.5
                                 {
-                                    let ang = ship.rot.to_radians();
-                                    let dir = vec2(ang.sin(), -ang.cos());
-                                    bullets.push(Bullet {
-                                        pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
-                                        vel: dir * 7.0,
-                                        shot_at: now,
-                                        collided: false,
-                                    });
-                                    last_shot = now;
+                                    if now - last_shot > 0.5 {
+                                        let ang = ship.rot.to_radians();
+                                        let dir = vec2(ang.sin(), -ang.cos());
+                                        bullets.push(Bullet {
+                                            pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
+                                            vel: dir * 7.0,
+                                            shot_at: now,
+                                            collided: false,
+                                        });
+                                        last_shot = now;
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // Physics / movement
+                // Movement & physics
                 ship.vel += acc;
                 if ship.vel.length() > 5.0 {
                     ship.vel = ship.vel.normalize() * 5.0;
@@ -279,7 +268,6 @@ async fn main() {
 
                 bullets.retain(|b| b.shot_at + 1.5 > now && !b.collided);
 
-                // Collisions & Game Over
                 let mut new_asts = Vec::new();
                 let mut collided_ship = false;
                 for a in asteroids.iter_mut() {
@@ -330,7 +318,6 @@ async fn main() {
 
                 // Drawing
                 clear_background(LIGHTGRAY);
-
                 for b in bullets.iter() {
                     draw_circle(b.pos.x, b.pos.y, 2.0, BLACK);
                 }
@@ -351,7 +338,6 @@ async fn main() {
                 draw_triangle_lines(nose, v2, v3, 2.0, BLACK);
 
                 if control_mode == ControlMode::Touch {
-                    // minimal translucent buttons
                     let scr_w = screen_width();
                     let scr_h = screen_height();
                     let btn_size = scr_w * 0.2;
@@ -373,8 +359,8 @@ async fn main() {
                         fire_w,
                         fire_h,
                     );
-
                     let alpha = 0.1;
+
                     draw_rectangle(
                         left_btn.x,
                         left_btn.y,
@@ -480,12 +466,7 @@ async fn main() {
 
             GameState::GameOver => {
                 clear_background(LIGHTGRAY);
-                let mut msg = "";
-                if control_mode == ControlMode::Touch {
-                    msg = "Game Over! Tap screen to Restart";
-                } else {
-                    msg = "Game Over! Press [enter] to Restart";
-                }
+                let msg = "Game Over! Press Enter or Tap to Restart";
                 let ts = measure_text(msg, None, 30, 1.0);
                 draw_text(
                     msg,
@@ -494,15 +475,7 @@ async fn main() {
                     30.0,
                     DARKGRAY,
                 );
-                if is_key_pressed(KeyCode::Enter) {
-                    let (ns, nb, na, nls) = new_game();
-                    ship = ns;
-                    bullets = nb;
-                    asteroids = na;
-                    last_shot = nls;
-                    game_state = GameState::StartMenu;
-                }
-                if !touches().is_empty() {
+                if is_key_pressed(KeyCode::Enter) || !touches().is_empty() {
                     let (ns, nb, na, nls) = new_game();
                     ship = ns;
                     bullets = nb;
@@ -515,4 +488,3 @@ async fn main() {
         }
     }
 }
-
