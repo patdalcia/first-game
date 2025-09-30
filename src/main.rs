@@ -110,13 +110,22 @@ async fn main() {
 
                 let prompt =
                     "Press [Enter] to play with keyboard\nor tap screen to play with touch";
+                let welcome_message = "Asteroids - Lovingly cloned by patdalcia <3";
                 let fs = 30.0;
                 let ts = measure_text(prompt, None, fs as _, 1.0);
+                let ts2 = measure_text(welcome_message, None, fs as _, 1.0);
                 // We can draw it centered roughly
+                draw_text(
+                    welcome_message,
+                    screen_width() / 2.0 - ts2.width / 2.0,
+                    screen_height() / 2.0 - ts2.height / 2.0,
+                    fs,
+                    DARKGRAY,
+                );
                 draw_text(
                     prompt,
                     screen_width() / 2.0 - ts.width / 2.0,
-                    screen_height() / 2.0 - ts.height / 2.0,
+                    (screen_height() / 2.0 - ts.height / 2.0) + 30.,
                     fs,
                     DARKGRAY,
                 );
@@ -211,40 +220,40 @@ async fn main() {
                                 ship.rot += 3.0;
                             } else if thrust_btn.contains(p) {
                                 let ang = ship.rot.to_radians();
-                                acc = vec2(ang.sin(), -ang.cos()) * 2.0;
+                                acc = vec2(ang.sin(), -ang.cos());
                             }
 
                             // Fire only on *new* press
-                            if let Some(phase) = touch_phase_opt {
-                                if phase == TouchPhase::Started && fire_btn.contains(p) {
-                                    if now - last_shot > 0.5 {
-                                        let ang = ship.rot.to_radians();
-                                        let dir = vec2(ang.sin(), -ang.cos());
-                                        bullets.push(Bullet {
-                                            pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
-                                            vel: dir * 7.0,
-                                            shot_at: now,
-                                            collided: false,
-                                        });
-                                        last_shot = now;
-                                    }
+                            if let Some(phase) = touch_phase_opt
+                                && phase == TouchPhase::Started
+                                && fire_btn.contains(p)
+                            {
+                                if now - last_shot > 0.5 {
+                                    let ang = ship.rot.to_radians();
+                                    let dir = vec2(ang.sin(), -ang.cos());
+                                    bullets.push(Bullet {
+                                        pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
+                                        vel: dir * 7.0,
+                                        shot_at: now,
+                                        collided: false,
+                                    });
+                                    last_shot = now;
                                 }
                             } else {
                                 // Fallback for mouse: detect click
                                 if is_mouse_button_pressed(MouseButton::Left)
                                     && fire_btn.contains(p)
+                                    && now - last_shot > 0.5
                                 {
-                                    if now - last_shot > 0.5 {
-                                        let ang = ship.rot.to_radians();
-                                        let dir = vec2(ang.sin(), -ang.cos());
-                                        bullets.push(Bullet {
-                                            pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
-                                            vel: dir * 7.0,
-                                            shot_at: now,
-                                            collided: false,
-                                        });
-                                        last_shot = now;
-                                    }
+                                    let ang = ship.rot.to_radians();
+                                    let dir = vec2(ang.sin(), -ang.cos());
+                                    bullets.push(Bullet {
+                                        pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
+                                        vel: dir * 7.0,
+                                        shot_at: now,
+                                        collided: false,
+                                    });
+                                    last_shot = now;
                                 }
                             }
                         }
@@ -471,7 +480,12 @@ async fn main() {
 
             GameState::GameOver => {
                 clear_background(LIGHTGRAY);
-                let msg = "Game Over! Press Enter to Restart";
+                let mut msg = "";
+                if control_mode == ControlMode::Touch {
+                    msg = "Game Over! Tap screen to Restart";
+                } else {
+                    msg = "Game Over! Press [enter] to Restart";
+                }
                 let ts = measure_text(msg, None, 30, 1.0);
                 draw_text(
                     msg,
@@ -488,8 +502,17 @@ async fn main() {
                     last_shot = nls;
                     game_state = GameState::StartMenu;
                 }
+                if !touches().is_empty() {
+                    let (ns, nb, na, nls) = new_game();
+                    ship = ns;
+                    bullets = nb;
+                    asteroids = na;
+                    last_shot = nls;
+                    game_state = GameState::StartMenu;
+                }
                 next_frame().await;
             }
         }
     }
 }
+
