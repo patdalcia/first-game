@@ -349,7 +349,7 @@ async fn main() {
                     let btn_size = scr_w * 0.2;
 
                     let right_btn = Rect::new(
-                        scr_w - btn_size,
+                        scr_w - ((scr_w / 2.) - btn_size),
                         scr_h - btn_size,
                         (scr_w / 2.) - btn_size,
                         btn_size,
@@ -362,10 +362,9 @@ async fn main() {
                     );
                     let left_btn =
                         Rect::new(0.0, scr_h - btn_size, (scr_w / 2.) - btn_size, btn_size);
-                    let fire_w = btn_size;
-                    let fire_h = btn_size;
-                    let fire_btn =
-                        Rect::new((scr_w - fire_w) / 2.0, scr_h - btn_size, fire_w, fire_h);
+                    let fire_w = scr_w;
+                    let fire_h = scr_h - btn_size;
+                    let fire_btn = Rect::new(0.0, scr_h - btn_size, fire_w, fire_h);
                     let alpha = 0.1;
 
                     draw_rectangle(
