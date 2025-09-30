@@ -492,6 +492,7 @@ async fn main() {
                     asteroids = na;
                     last_shot = nls;
                     game_state = GameState::StartMenu;
+                    touches().clear();
                 }
                 next_frame().await;
             }
@@ -524,4 +525,3 @@ async fn main() {
         }
     }
 }
-
