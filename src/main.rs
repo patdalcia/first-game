@@ -2,10 +2,11 @@ use macroquad::prelude::*;
 
 const SHIP_HEIGHT: f32 = 25.;
 const SHIP_BASE: f32 = 22.;
+const FIRE_RATE: f64 = 0.3; // seconds between shots when holding
 
 struct Ship {
     pos: Vec2,
-    rot: f32, // in degrees
+    rot: f32,
     vel: Vec2,
 }
 
@@ -59,19 +60,19 @@ fn wrap_around(v: &Vec2) -> Vec2 {
 
 fn new_game() -> (Ship, Vec<Bullet>, Vec<Asteroid>, f64) {
     let ship = Ship {
-        pos: vec2(screen_width() / 2., screen_height() / 2.),
+        pos: vec2(screen_width() / 2.0, screen_height() / 2.0),
         rot: 0.0,
         vel: Vec2::ZERO,
     };
     let bullets = Vec::new();
     let mut asteroids = Vec::new();
-    let screen_center = vec2(screen_width() / 2., screen_height() / 2.);
+    let center = vec2(screen_width() / 2.0, screen_height() / 2.0);
     for _ in 0..10 {
         asteroids.push(Asteroid {
-            pos: screen_center
+            pos: center
                 + vec2(rand::gen_range(-1., 1.), rand::gen_range(-1., 1.)).normalize()
                     * screen_width().min(screen_height())
-                    / 2.,
+                    / 2.0,
             vel: vec2(rand::gen_range(-1., 1.), rand::gen_range(-1., 1.)),
             rot: 0.0,
             rot_speed: rand::gen_range(-2., 2.),
@@ -94,7 +95,7 @@ fn conf() -> Conf {
 
 #[macroquad::main(conf)]
 async fn main() {
-    // Warm up a few frames
+    // settle some frames
     for _ in 0..3 {
         next_frame().await;
     }
@@ -107,23 +108,29 @@ async fn main() {
         match game_state {
             GameState::StartMenu => {
                 clear_background(LIGHTGRAY);
+                // Make font sizes more aggressive for small screens
+                let base = screen_width().min(screen_height());
+                let fs_title = base * 0.07; // ~7% of smaller dim
+                let fs_prompt = base * 0.04;
+
                 let welcome = "Asteroids";
                 let prompt = "Press [Enter] for keyboard or tap for touch";
-                let fs = screen_width() * 0.02;
-                let ts_w = measure_text(welcome, None, fs as u16, 1.0);
-                let ts_p = measure_text(prompt, None, fs as u16, 1.0);
+
+                let ts_w = measure_text(welcome, None, fs_title as u16, 1.0);
+                let ts_p = measure_text(prompt, None, fs_prompt as u16, 1.0);
+
                 draw_text(
                     welcome,
                     screen_width() / 2.0 - ts_w.width / 2.0,
                     screen_height() / 2.0 - ts_w.height - 20.0,
-                    fs,
+                    fs_title,
                     DARKGRAY,
                 );
                 draw_text(
                     prompt,
                     screen_width() / 2.0 - ts_p.width / 2.0,
                     screen_height() / 2.0 + 20.0,
-                    fs,
+                    fs_prompt,
                     DARKGRAY,
                 );
 
@@ -135,6 +142,7 @@ async fn main() {
                     control_mode = ControlMode::Touch;
                     game_state = GameState::Playing;
                 }
+
                 next_frame().await;
             }
 
@@ -154,7 +162,8 @@ async fn main() {
                             let ang = ship.rot.to_radians();
                             acc = vec2(ang.sin(), -ang.cos()) * 2.0;
                         }
-                        if is_key_down(KeyCode::Space) && (now - last_shot > 0.5) {
+                        // For keyboard, continuous fire also
+                        if is_key_down(KeyCode::Space) && (now - last_shot > FIRE_RATE) {
                             let ang = ship.rot.to_radians();
                             let dir = vec2(ang.sin(), -ang.cos());
                             bullets.push(Bullet {
@@ -175,7 +184,7 @@ async fn main() {
                         let scr_h = screen_height();
                         let btn_size = scr_w * 0.2;
 
-                        // Bottom control zones: left, thrust, right
+                        // Bottom control zones
                         let left_btn = Rect::new(0.0, scr_h - btn_size, btn_size, btn_size);
                         let right_btn =
                             Rect::new(scr_w - btn_size, scr_h - btn_size, btn_size, btn_size);
@@ -186,7 +195,6 @@ async fn main() {
                             btn_size,
                         );
 
-                        // Touch detection
                         let mut touch_pos_opt: Option<Vec2> = None;
                         let mut touch_phase_opt: Option<TouchPhase> = None;
 
@@ -200,7 +208,7 @@ async fn main() {
                         }
 
                         if let Some(p) = touch_pos_opt {
-                            // Controls if inside control zones
+                            // If touch in control zones:
                             if left_btn.contains(p) {
                                 ship.rot -= 3.0;
                             } else if right_btn.contains(p) {
@@ -209,36 +217,18 @@ async fn main() {
                                 let ang = ship.rot.to_radians();
                                 acc = vec2(ang.sin(), -ang.cos()) * 0.5;
                             } else {
-                                // If the touch is *not* in the control button row,
-                                // treat it as a fire tap (if new press)
-                                if let Some(phase) = touch_phase_opt {
-                                    if phase == TouchPhase::Started {
-                                        if now - last_shot > 0.5 {
-                                            let ang = ship.rot.to_radians();
-                                            let dir = vec2(ang.sin(), -ang.cos());
-                                            bullets.push(Bullet {
-                                                pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
-                                                vel: dir * 7.0,
-                                                shot_at: now,
-                                                collided: false,
-                                            });
-                                            last_shot = now;
-                                        }
-                                    }
-                                } else {
-                                    if is_mouse_button_pressed(MouseButton::Left) {
-                                        if now - last_shot > 0.5 {
-                                            let ang = ship.rot.to_radians();
-                                            let dir = vec2(ang.sin(), -ang.cos());
-                                            bullets.push(Bullet {
-                                                pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
-                                                vel: dir * 7.0,
-                                                shot_at: now,
-                                                collided: false,
-                                            });
-                                            last_shot = now;
-                                        }
-                                    }
+                                // Elsewhere = fire region
+                                // Continuous fire when holding
+                                if now - last_shot > FIRE_RATE {
+                                    let ang = ship.rot.to_radians();
+                                    let dir = vec2(ang.sin(), -ang.cos());
+                                    bullets.push(Bullet {
+                                        pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
+                                        vel: dir * 7.0,
+                                        shot_at: now,
+                                        collided: false,
+                                    });
+                                    last_shot = now;
                                 }
                             }
                         }
@@ -264,7 +254,6 @@ async fn main() {
 
                 bullets.retain(|b| b.shot_at + 1.5 > now && !b.collided);
 
-                // Collision & Win / Game Over detection
                 let mut new_asts = Vec::new();
                 let mut collided_ship = false;
                 for a in asteroids.iter_mut() {
@@ -392,7 +381,7 @@ async fn main() {
                         WHITE,
                     );
 
-                    let small = btn_size * 0.25;
+                    let small = btn_size * 0.3; // make icons a bit larger
                     draw_text(
                         "<",
                         left_btn.x + left_btn.w / 2.0 - small / 2.0,
@@ -415,14 +404,14 @@ async fn main() {
                         WHITE,
                     );
 
-                    // Fire label above the control row
+                    // Fire label
                     let fire_label = "⦿ Fire";
-                    let fs = screen_width() * 0.015;
+                    let fs = (screen_width().max(screen_height())) * 0.025; // make it a bit bigger
                     let ts = measure_text(fire_label, None, fs as u16, 1.0);
                     draw_text(
                         fire_label,
                         scr_w / 2.0 - ts.width / 2.0,
-                        scr_h - btn_size - 10.0, // just above the control buttons
+                        scr_h - btn_size - 12.0, // slightly above bottom
                         fs,
                         WHITE,
                     );
@@ -433,8 +422,9 @@ async fn main() {
 
             GameState::Paused => {
                 clear_background(LIGHTGRAY);
+                let base = screen_width().min(screen_height());
+                let fs = base * 0.06;
                 let msg = "PAUSED — Press Enter to Resume";
-                let fs = screen_width() * 0.02;
                 let ts = measure_text(msg, None, fs as u16, 1.0);
                 draw_text(
                     msg,
@@ -451,12 +441,13 @@ async fn main() {
 
             GameState::GameOver => {
                 clear_background(LIGHTGRAY);
+                let base = screen_width().min(screen_height());
+                let fs = base * 0.06;
                 let msg = if control_mode == ControlMode::Touch {
-                    "Game Over! Tap screen to restart"
+                    "Game Over! Tap to Restart"
                 } else {
-                    "Game Over! Press Enter to restart"
+                    "Game Over! Press Enter to Restart"
                 };
-                let fs = screen_width() * 0.02;
                 let ts = measure_text(msg, None, fs as u16, 1.0);
                 draw_text(
                     msg,
@@ -478,12 +469,13 @@ async fn main() {
 
             GameState::Win => {
                 clear_background(LIGHTGRAY);
+                let base = screen_width().min(screen_height());
+                let fs = base * 0.06;
                 let msg = if control_mode == ControlMode::Touch {
-                    "You Win! Tap screen to play again"
+                    "You Win! Tap to Play Again"
                 } else {
-                    "You Win! Press Enter to play again"
+                    "You Win! Press Enter to Play Again"
                 };
-                let fs = screen_width() * 0.02;
                 let ts = measure_text(msg, None, fs as u16, 1.0);
                 draw_text(
                     msg,
