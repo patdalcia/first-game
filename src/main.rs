@@ -109,7 +109,7 @@ async fn main() {
             GameState::StartMenu => {
                 clear_background(LIGHTGRAY);
                 let base = screen_width().min(screen_height());
-                let fs_title = base * 0.07;
+                let fs_title = base * 0.05;
                 let fs_prompt = base * 0.04;
 
                 let welcome = "Asteroids - Lovingly cloned by patdalcia <3";
@@ -498,4 +498,3 @@ async fn main() {
         }
     }
 }
-
