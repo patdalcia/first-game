@@ -112,7 +112,7 @@ async fn main() {
                 let fs_title = base * 0.07;
                 let fs_prompt = base * 0.04;
 
-                let welcome = "Asteroids";
+                let welcome = "Asteroids - Lovingly cloned by patdalcia <3";
                 let prompt = "Press [Enter] or tap screen to start with touch";
 
                 let ts_w = measure_text(welcome, None, fs_title as u16, 1.0);
@@ -498,3 +498,4 @@ async fn main() {
         }
     }
 }
+
