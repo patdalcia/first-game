@@ -31,6 +31,7 @@ enum GameState {
     Playing,
     Paused,
     GameOver,
+    Win,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -93,7 +94,7 @@ fn conf() -> Conf {
 
 #[macroquad::main(conf)]
 async fn main() {
-    // Let the screen stabilize
+    // Let the screen settle a few frames
     for _ in 0..3 {
         next_frame().await;
     }
@@ -106,17 +107,16 @@ async fn main() {
         match game_state {
             GameState::StartMenu => {
                 clear_background(LIGHTGRAY);
-
+                let welcome = "Asteroids";
                 let prompt =
                     "Press [Enter] to play with keyboard\nor tap screen to play with touch";
-                let welcome_message = "Asteroids";
                 let fs = 30.0;
-                let ts_w = measure_text(welcome_message, None, fs as _, 1.0);
-                let ts_p = measure_text(prompt, None, fs as _, 1.0);
+                let ts_w = measure_text(welcome, None, fs as u16, 1.0);
+                let ts_p = measure_text(prompt, None, fs as u16, 1.0);
                 draw_text(
-                    welcome_message,
+                    welcome,
                     screen_width() / 2.0 - ts_w.width / 2.0,
-                    screen_height() / 2.0 - ts_w.height / 2.0 - 20.0,
+                    screen_height() / 2.0 - ts_w.height - 20.0,
                     fs,
                     DARKGRAY,
                 );
@@ -144,6 +144,7 @@ async fn main() {
                 let now = get_time();
                 let mut acc = -ship.vel / 100.0;
 
+                // Input handling
                 match control_mode {
                     ControlMode::Keyboard => {
                         if is_key_down(KeyCode::Left) {
@@ -166,6 +167,9 @@ async fn main() {
                                 collided: false,
                             });
                             last_shot = now;
+                        }
+                        if is_key_down(KeyCode::Escape) {
+                            game_state = GameState::Paused;
                         }
                     }
                     ControlMode::Touch => {
@@ -210,7 +214,7 @@ async fn main() {
                                 ship.rot += 3.0;
                             } else if thrust_btn.contains(p) {
                                 let ang = ship.rot.to_radians();
-                                // scaled-down thrust for touch mode
+                                // Reduced thrust for touch mode
                                 acc = vec2(ang.sin(), -ang.cos()) * 1.0;
                             }
 
@@ -249,7 +253,7 @@ async fn main() {
                     }
                 }
 
-                // Movement & physics
+                // Physics & movement
                 ship.vel += acc;
                 if ship.vel.length() > 5.0 {
                     ship.vel = ship.vel.normalize() * 5.0;
@@ -268,6 +272,7 @@ async fn main() {
 
                 bullets.retain(|b| b.shot_at + 1.5 > now && !b.collided);
 
+                // Check collisions / asteroids & win condition
                 let mut new_asts = Vec::new();
                 let mut collided_ship = false;
                 for a in asteroids.iter_mut() {
@@ -311,8 +316,10 @@ async fn main() {
                 } else {
                     asteroids.retain(|a| !a.collided);
                     asteroids.extend(new_asts);
+
                     if asteroids.is_empty() {
-                        game_state = GameState::GameOver;
+                        // All asteroids destroyed → Win state
+                        game_state = GameState::Win;
                     }
                 }
 
@@ -324,7 +331,6 @@ async fn main() {
                 for a in asteroids.iter() {
                     draw_poly_lines(a.pos.x, a.pos.y, a.sides, a.size, a.rot, 2.0, BLACK);
                 }
-
                 let ang = ship.rot.to_radians();
                 let dir_f = vec2(ang.sin(), -ang.cos());
                 let dir_l = vec2(-ang.cos(), -ang.sin());
@@ -450,7 +456,7 @@ async fn main() {
             GameState::Paused => {
                 clear_background(LIGHTGRAY);
                 let msg = "PAUSED — Press Enter to Resume";
-                let ts = measure_text(msg, None, 30, 1.0);
+                let ts = measure_text(msg, None, 30 as u16, 1.0);
                 draw_text(
                     msg,
                     screen_width() / 2.0 - ts.width / 2.0,
@@ -466,8 +472,38 @@ async fn main() {
 
             GameState::GameOver => {
                 clear_background(LIGHTGRAY);
-                let msg = "Game Over! Press Enter or Tap to Restart";
-                let ts = measure_text(msg, None, 30, 1.0);
+                let msg = if control_mode == ControlMode::Touch {
+                    "Game Over! Tap screen to restart"
+                } else {
+                    "Game Over! Press Enter to restart"
+                };
+                let ts = measure_text(msg, None, 30 as u16, 1.0);
+                draw_text(
+                    msg,
+                    screen_width() / 2.0 - ts.width / 2.0,
+                    screen_height() / 2.0 - ts.height / 2.0,
+                    30.0,
+                    DARKGRAY,
+                );
+                if is_key_pressed(KeyCode::Enter) || !touches().is_empty() {
+                    let (ns, nb, na, nls) = new_game();
+                    ship = ns;
+                    bullets = nb;
+                    asteroids = na;
+                    last_shot = nls;
+                    game_state = GameState::StartMenu;
+                }
+                next_frame().await;
+            }
+
+            GameState::Win => {
+                clear_background(LIGHTGRAY);
+                let msg = if control_mode == ControlMode::Touch {
+                    "You Win! Tap screen to play again"
+                } else {
+                    "You Win! Press Enter to play again"
+                };
+                let ts = measure_text(msg, None, 30 as u16, 1.0);
                 draw_text(
                     msg,
                     screen_width() / 2.0 - ts.width / 2.0,
@@ -488,3 +524,4 @@ async fn main() {
         }
     }
 }
+
