@@ -107,10 +107,10 @@ async fn main() {
         match game_state {
             GameState::StartMenu => {
                 clear_background(LIGHTGRAY);
-                let welcome = "Asteroids";
+                let welcome = "Asteroids - Cloned with love by patdalcia <3";
                 let prompt =
                     "Press [Enter] to play with keyboard\nor tap screen to play with touch";
-                let fs = 30.0;
+                let fs = screen_width() * 0.02;
                 let ts_w = measure_text(welcome, None, fs as u16, 1.0);
                 let ts_p = measure_text(prompt, None, fs as u16, 1.0);
                 draw_text(
