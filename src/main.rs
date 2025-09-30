@@ -215,7 +215,7 @@ async fn main() {
                             } else if thrust_btn.contains(p) {
                                 let ang = ship.rot.to_radians();
                                 // Reduced thrust for touch mode
-                                acc = vec2(ang.sin(), -ang.cos()) * 1.0;
+                                acc = vec2(ang.sin(), -ang.cos()) * 0.5;
                             }
 
                             if let Some(phase) = touch_phase_opt {
@@ -348,23 +348,24 @@ async fn main() {
                     let scr_h = screen_height();
                     let btn_size = scr_w * 0.2;
 
-                    let left_btn = Rect::new(0.0, scr_h - btn_size, btn_size, btn_size);
-                    let right_btn =
-                        Rect::new(scr_w - btn_size, scr_h - btn_size, btn_size, btn_size);
+                    let right_btn = Rect::new(
+                        scr_w - btn_size,
+                        scr_h - btn_size,
+                        (scr_w / 2.) - btn_size,
+                        btn_size,
+                    );
                     let thrust_btn = Rect::new(
                         (scr_w - btn_size) / 2.0,
                         scr_h - btn_size,
                         btn_size,
                         btn_size,
                     );
-                    let fire_w = btn_size * 0.8;
-                    let fire_h = btn_size * 0.6;
-                    let fire_btn = Rect::new(
-                        (scr_w - fire_w) / 2.0,
-                        scr_h - btn_size - fire_h - 10.0,
-                        fire_w,
-                        fire_h,
-                    );
+                    let left_btn =
+                        Rect::new(0.0, scr_h - btn_size, (scr_w / 2.) - btn_size, btn_size);
+                    let fire_w = btn_size;
+                    let fire_h = btn_size;
+                    let fire_btn =
+                        Rect::new((scr_w - fire_w) / 2.0, scr_h - btn_size, fire_w, fire_h);
                     let alpha = 0.1;
 
                     draw_rectangle(
