@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 
 const SHIP_HEIGHT: f32 = 25.;
 const SHIP_BASE: f32 = 22.;
-const FIRE_RATE: f64 = 0.3; // seconds between shots when holding
+const FIRE_RATE: f64 = 0.25; // seconds between shots when holding
 
 struct Ship {
     pos: Vec2,
@@ -95,7 +95,7 @@ fn conf() -> Conf {
 
 #[macroquad::main(conf)]
 async fn main() {
-    // settle some frames
+    // settle a few frames
     for _ in 0..3 {
         next_frame().await;
     }
@@ -108,13 +108,12 @@ async fn main() {
         match game_state {
             GameState::StartMenu => {
                 clear_background(LIGHTGRAY);
-                // Make font sizes more aggressive for small screens
                 let base = screen_width().min(screen_height());
-                let fs_title = base * 0.07; // ~7% of smaller dim
+                let fs_title = base * 0.07;
                 let fs_prompt = base * 0.04;
 
                 let welcome = "Asteroids";
-                let prompt = "Press [Enter] for keyboard or tap for touch";
+                let prompt = "Press [Enter] or tap screen to start with touch";
 
                 let ts_w = measure_text(welcome, None, fs_title as u16, 1.0);
                 let ts_p = measure_text(prompt, None, fs_prompt as u16, 1.0);
@@ -150,86 +149,82 @@ async fn main() {
                 let now = get_time();
                 let mut acc = -ship.vel / 100.0;
 
-                match control_mode {
-                    ControlMode::Keyboard => {
-                        if is_key_down(KeyCode::Left) {
-                            ship.rot -= 5.0;
-                        }
-                        if is_key_down(KeyCode::Right) {
-                            ship.rot += 5.0;
-                        }
-                        if is_key_down(KeyCode::Up) {
-                            let ang = ship.rot.to_radians();
-                            acc = vec2(ang.sin(), -ang.cos()) * 2.0;
-                        }
-                        // For keyboard, continuous fire also
-                        if is_key_down(KeyCode::Space) && (now - last_shot > FIRE_RATE) {
-                            let ang = ship.rot.to_radians();
-                            let dir = vec2(ang.sin(), -ang.cos());
-                            bullets.push(Bullet {
-                                pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
-                                vel: dir * 7.0,
-                                shot_at: now,
-                                collided: false,
-                            });
-                            last_shot = now;
-                        }
-                        if is_key_down(KeyCode::Escape) {
-                            game_state = GameState::Paused;
-                        }
+                // Keyboard mode
+                if control_mode == ControlMode::Keyboard {
+                    if is_key_down(KeyCode::Left) {
+                        ship.rot -= 5.0;
                     }
+                    if is_key_down(KeyCode::Right) {
+                        ship.rot += 5.0;
+                    }
+                    if is_key_down(KeyCode::Up) {
+                        let ang = ship.rot.to_radians();
+                        acc = vec2(ang.sin(), -ang.cos()) * 2.0;
+                    }
+                    if is_key_down(KeyCode::Space) && (now - last_shot > FIRE_RATE) {
+                        let ang = ship.rot.to_radians();
+                        let dir = vec2(ang.sin(), -ang.cos());
+                        bullets.push(Bullet {
+                            pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
+                            vel: dir * 7.0,
+                            shot_at: now,
+                            collided: false,
+                        });
+                        last_shot = now;
+                    }
+                    if is_key_down(KeyCode::Escape) {
+                        game_state = GameState::Paused;
+                    }
+                }
 
-                    ControlMode::Touch => {
-                        let scr_w = screen_width();
-                        let scr_h = screen_height();
-                        let btn_size = scr_w * 0.2;
+                // Touch mode (multitouch)
+                if control_mode == ControlMode::Touch {
+                    let scr_w = screen_width();
+                    let scr_h = screen_height();
+                    let btn_size = scr_w * 0.2;
 
-                        // Bottom control zones
-                        let left_btn = Rect::new(0.0, scr_h - btn_size, btn_size, btn_size);
-                        let right_btn =
-                            Rect::new(scr_w - btn_size, scr_h - btn_size, btn_size, btn_size);
-                        let thrust_btn = Rect::new(
-                            (scr_w - btn_size) / 2.0,
-                            scr_h - btn_size,
-                            btn_size,
-                            btn_size,
-                        );
+                    let left_btn = Rect::new(0.0, scr_h - btn_size, btn_size, btn_size);
+                    let right_btn =
+                        Rect::new(scr_w - btn_size, scr_h - btn_size, btn_size, btn_size);
+                    let thrust_btn = Rect::new(
+                        (scr_w - btn_size) / 2.0,
+                        scr_h - btn_size,
+                        btn_size,
+                        btn_size,
+                    );
 
-                        let mut touch_pos_opt: Option<Vec2> = None;
-                        let mut touch_phase_opt: Option<TouchPhase> = None;
+                    // We will track whether any touch is doing fire, thrust, or rotate
+                    // Because touches() is a Vec<Touch>, multiple touches can exist
+                    for touch in touches().iter() {
+                        let p = touch.position;
+                        let phase = touch.phase;
 
-                        if let Some(t0) = touches().get(0) {
-                            touch_pos_opt = Some(t0.position);
-                            touch_phase_opt = Some(t0.phase);
-                        } else if is_mouse_button_down(MouseButton::Left) {
-                            let (mx, my) = mouse_position();
-                            touch_pos_opt = Some(vec2(mx, my));
-                            touch_phase_opt = None;
+                        // If touch in left zone → rotate left
+                        if left_btn.contains(p) {
+                            ship.rot -= 3.0;
                         }
-
-                        if let Some(p) = touch_pos_opt {
-                            // If touch in control zones:
-                            if left_btn.contains(p) {
-                                ship.rot -= 3.0;
-                            } else if right_btn.contains(p) {
-                                ship.rot += 3.0;
-                            } else if thrust_btn.contains(p) {
+                        // If in right zone → rotate right
+                        else if right_btn.contains(p) {
+                            ship.rot += 3.0;
+                        }
+                        // If in thrust zone → thrust
+                        else if thrust_btn.contains(p) {
+                            let ang = ship.rot.to_radians();
+                            acc = vec2(ang.sin(), -ang.cos()) * 0.5;
+                        }
+                        // Else (touch not on control buttons) → fire
+                        else {
+                            // continuous fire if holding or starting
+                            if now - last_shot > FIRE_RATE {
                                 let ang = ship.rot.to_radians();
-                                acc = vec2(ang.sin(), -ang.cos()) * 0.5;
-                            } else {
-                                // Elsewhere = fire region
-                                // Continuous fire when holding
-                                if now - last_shot > FIRE_RATE {
-                                    let ang = ship.rot.to_radians();
-                                    let dir = vec2(ang.sin(), -ang.cos());
-                                    bullets.push(Bullet {
-                                        pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
-                                        vel: dir * 7.0,
-                                        shot_at: now,
-                                        collided: false,
-                                    });
-                                    last_shot = now;
-                                }
+                                let dir = vec2(ang.sin(), -ang.cos());
+                                bullets.push(Bullet {
+                                    pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
+                                    vel: dir * 7.0,
+                                    shot_at: now,
+                                    collided: false,
+                                });
+                                last_shot = now;
                             }
                         }
                     }
@@ -254,6 +249,7 @@ async fn main() {
 
                 bullets.retain(|b| b.shot_at + 1.5 > now && !b.collided);
 
+                // Collision / Win / GameOver
                 let mut new_asts = Vec::new();
                 let mut collided_ship = false;
                 for a in asteroids.iter_mut() {
@@ -297,7 +293,6 @@ async fn main() {
                 } else {
                     asteroids.retain(|a| !a.collided);
                     asteroids.extend(new_asts);
-
                     if asteroids.is_empty() {
                         game_state = GameState::Win;
                     }
@@ -311,6 +306,7 @@ async fn main() {
                 for a in asteroids.iter() {
                     draw_poly_lines(a.pos.x, a.pos.y, a.sides, a.size, a.rot, 2.0, BLACK);
                 }
+
                 let ang = ship.rot.to_radians();
                 let dir_f = vec2(ang.sin(), -ang.cos());
                 let dir_l = vec2(-ang.cos(), -ang.sin());
@@ -381,7 +377,7 @@ async fn main() {
                         WHITE,
                     );
 
-                    let small = btn_size * 0.3; // make icons a bit larger
+                    let small = btn_size * 0.3;
                     draw_text(
                         "<",
                         left_btn.x + left_btn.w / 2.0 - small / 2.0,
@@ -406,12 +402,12 @@ async fn main() {
 
                     // Fire label
                     let fire_label = "⦿ Fire";
-                    let fs = (screen_width().max(screen_height())) * 0.025; // make it a bit bigger
+                    let fs = screen_width().max(screen_height()) * 0.025;
                     let ts = measure_text(fire_label, None, fs as u16, 1.0);
                     draw_text(
                         fire_label,
                         scr_w / 2.0 - ts.width / 2.0,
-                        scr_h - btn_size - 12.0, // slightly above bottom
+                        scr_h - btn_size - 12.0,
                         fs,
                         WHITE,
                     );
