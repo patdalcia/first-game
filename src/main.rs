@@ -94,7 +94,6 @@ fn conf() -> Conf {
 
 #[macroquad::main(conf)]
 async fn main() {
-    // Let the screen settle a few frames
     for _ in 0..3 {
         next_frame().await;
     }
@@ -107,7 +106,7 @@ async fn main() {
         match game_state {
             GameState::StartMenu => {
                 clear_background(LIGHTGRAY);
-                let welcome = "Asteroids - Cloned with love by patdalcia <3";
+                let welcome = "Asteroids - Cloned with love";
                 let prompt =
                     "Press [Enter] to play with keyboard\nor tap screen to play with touch";
                 let fs = screen_width() * 0.02;
@@ -144,7 +143,6 @@ async fn main() {
                 let now = get_time();
                 let mut acc = -ship.vel / 100.0;
 
-                // Input handling
                 match control_mode {
                     ControlMode::Keyboard => {
                         if is_key_down(KeyCode::Left) {
@@ -177,6 +175,7 @@ async fn main() {
                         let scr_h = screen_height();
                         let btn_size = scr_w * 0.2;
 
+                        // left and right zones
                         let left_btn = Rect::new(0.0, scr_h - btn_size, btn_size, btn_size);
                         let right_btn =
                             Rect::new(scr_w - btn_size, scr_h - btn_size, btn_size, btn_size);
@@ -186,13 +185,14 @@ async fn main() {
                             btn_size,
                             btn_size,
                         );
-                        let fire_w = btn_size * 0.8;
-                        let fire_h = btn_size * 0.6;
+
+                        // Fire button: full width strip *above* the bottom band
+                        // So it starts just above the bottom button row
                         let fire_btn = Rect::new(
-                            (scr_w - fire_w) / 2.0,
-                            scr_h - btn_size - fire_h - 10.0,
-                            fire_w,
-                            fire_h,
+                            0.0,
+                            scr_h - btn_size * 2.0, // two layers high (control buttons + this)
+                            scr_w,
+                            btn_size, // same height as control buttons
                         );
 
                         let mut touch_pos_opt: Option<Vec2> = None;
@@ -214,10 +214,10 @@ async fn main() {
                                 ship.rot += 3.0;
                             } else if thrust_btn.contains(p) {
                                 let ang = ship.rot.to_radians();
-                                // Reduced thrust for touch mode
-                                acc = vec2(ang.sin(), -ang.cos()) * 0.5;
+                                acc = vec2(ang.sin(), -ang.cos()) * 0.5; // slower thrust
                             }
 
+                            // Fire only when touch starts in fire region
                             if let Some(phase) = touch_phase_opt {
                                 if phase == TouchPhase::Started && fire_btn.contains(p) {
                                     if now - last_shot > 0.5 {
@@ -272,7 +272,6 @@ async fn main() {
 
                 bullets.retain(|b| b.shot_at + 1.5 > now && !b.collided);
 
-                // Check collisions / asteroids & win condition
                 let mut new_asts = Vec::new();
                 let mut collided_ship = false;
                 for a in asteroids.iter_mut() {
@@ -316,9 +315,7 @@ async fn main() {
                 } else {
                     asteroids.retain(|a| !a.collided);
                     asteroids.extend(new_asts);
-
                     if asteroids.is_empty() {
-                        // All asteroids destroyed → Win state
                         game_state = GameState::Win;
                     }
                 }
@@ -348,23 +345,16 @@ async fn main() {
                     let scr_h = screen_height();
                     let btn_size = scr_w * 0.2;
 
-                    let right_btn = Rect::new(
-                        scr_w - ((scr_w / 2.) - btn_size),
-                        scr_h - btn_size,
-                        (scr_w / 2.) - btn_size,
-                        btn_size,
-                    );
+                    let left_btn = Rect::new(0.0, scr_h - btn_size, btn_size, btn_size);
+                    let right_btn =
+                        Rect::new(scr_w - btn_size, scr_h - btn_size, btn_size, btn_size);
                     let thrust_btn = Rect::new(
                         (scr_w - btn_size) / 2.0,
                         scr_h - btn_size,
                         btn_size,
                         btn_size,
                     );
-                    let left_btn =
-                        Rect::new(0.0, scr_h - btn_size, (scr_w / 2.) - btn_size, btn_size);
-                    let fire_w = scr_w;
-                    let fire_h = scr_h - btn_size;
-                    let fire_btn = Rect::new(0.0, scr_h - btn_size, fire_w, fire_h);
+                    let fire_btn = Rect::new(0.0, scr_h - btn_size * 2.0, scr_w, btn_size);
                     let alpha = 0.1;
 
                     draw_rectangle(
@@ -492,7 +482,6 @@ async fn main() {
                     asteroids = na;
                     last_shot = nls;
                     game_state = GameState::StartMenu;
-                    touches().clear();
                 }
                 next_frame().await;
             }
@@ -525,3 +514,4 @@ async fn main() {
         }
     }
 }
+
