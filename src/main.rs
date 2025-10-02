@@ -375,18 +375,16 @@ async fn main() {
                         } else if thrust_btn.contains(p) {
                             let ang = ship.rot.to_radians();
                             acc = vec2(ang.sin(), -ang.cos()) * 0.5;
-                        } else {
-                            if now - last_shot > FIRE_RATE {
-                                let ang = ship.rot.to_radians();
-                                let dir = vec2(ang.sin(), -ang.cos());
-                                bullets.push(Bullet {
-                                    pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
-                                    vel: dir * 7.0,
-                                    shot_at: now,
-                                    collided: false,
-                                });
-                                last_shot = now;
-                            }
+                        } else if now - last_shot > FIRE_RATE {
+                            let ang = ship.rot.to_radians();
+                            let dir = vec2(ang.sin(), -ang.cos());
+                            bullets.push(Bullet {
+                                pos: ship.pos + dir * (SHIP_HEIGHT / 2.0),
+                                vel: dir * 7.0,
+                                shot_at: now,
+                                collided: false,
+                            });
+                            last_shot = now;
                         }
                     }
                 }
@@ -508,25 +506,15 @@ async fn main() {
                     DARKGRAY,
                 );
 
+                // Drawing touch controls
                 if control_mode == ControlMode::Touch {
                     let scr_w = screen_width();
                     let scr_h = screen_height();
                     let btn_size = scr_w * 0.2;
 
-                    let left_btn =
-                        Rect::new(0.0, scr_h - btn_size, (scr_w / 2.0) - btn_size, btn_size);
-                    let right_btn = Rect::new(
-                        scr_w - ((scr_w / 2.0) - btn_size),
-                        scr_h - btn_size,
-                        (scr_w / 2.0) - btn_size,
-                        btn_size,
-                    );
-                    let thrust_btn = Rect::new(
-                        (scr_w - btn_size) / 2.0,
-                        scr_h - btn_size,
-                        btn_size,
-                        btn_size,
-                    );
+                    let left_btn = Rect::new(0.0, scr_h - btn_size, btn_size, btn_size);
+                    let right_btn = Rect::new(btn_size, scr_h - btn_size, btn_size, btn_size);
+                    let thrust_btn = Rect::new(scr_w / 2.0, scr_h - btn_size, scr_w / 2., btn_size);
 
                     let alpha = 0.1;
                     draw_rectangle(
