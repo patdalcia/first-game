@@ -321,13 +321,13 @@ async fn main() {
                 let mut acc = -ship.vel / 100.0;
 
                 if control_mode == ControlMode::Keyboard {
-                    if is_key_down(KeyCode::Left) {
+                    if is_key_down(KeyCode::Left) || is_key_down(KeyCode::A) {
                         ship.rot -= 5.0;
                     }
-                    if is_key_down(KeyCode::Right) {
+                    if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) {
                         ship.rot += 5.0;
                     }
-                    if is_key_down(KeyCode::Up) {
+                    if is_key_down(KeyCode::Up) || is_key_down(KeyCode::W) {
                         let ang = ship.rot.to_radians();
                         acc = vec2(ang.sin(), -ang.cos()) * 2.0;
                     }
@@ -357,6 +357,7 @@ async fn main() {
                     let right_btn =
                         Rect::new(rotation_btn_w, scr_h - btn_size, rotation_btn_w, btn_size);
                     let thrust_btn = Rect::new(scr_w / 2., scr_h - btn_size, scr_w / 2., btn_size);
+                    let pause_btn = Rect::new(scr_w / 8., scr_h - btn_size, scr_w / 6., btn_size);
 
                     // Auto fire for touch
                     if now - last_shot > FIRE_RATE {
@@ -379,7 +380,9 @@ async fn main() {
                             ship.rot += 3.0;
                         } else if thrust_btn.contains(p) {
                             let ang = ship.rot.to_radians();
-                            acc = vec2(ang.sin(), -ang.cos()) * 0.5;
+                            acc = vec2(ang.sin(), -ang.cos()) * 0.25;
+                        } else if pause_btn.contains(p) {
+                            game_state = GameState::Paused;
                         }
 
                         // Uncomment to enable tap to shoot
@@ -406,7 +409,6 @@ async fn main() {
 
                 for b in bullets.iter_mut() {
                     b.pos += b.vel;
-                }
                 for a in asteroids.iter_mut() {
                     a.pos += a.vel;
                     a.pos = wrap_around(&a.pos);
@@ -542,6 +544,7 @@ async fn main() {
                     let right_btn =
                         Rect::new(rotation_btn_w, scr_h - btn_size, rotation_btn_w, btn_size);
                     let thrust_btn = Rect::new(scr_w / 2.0, scr_h - btn_size, scr_w / 2., btn_size);
+                    let pause_btn = Rect::new(scr_w / 8., scr_h - btn_size, scr_w / 6., btn_size);
 
                     let alpha = 0.1;
                     draw_rectangle(
@@ -563,6 +566,13 @@ async fn main() {
                         thrust_btn.y,
                         thrust_btn.w,
                         thrust_btn.h,
+                        Color::new(0.0, 0.0, 0.0, alpha),
+                    );
+                    draw_rectangle(
+                        pause_btn.x,
+                        pause_btn.y,
+                        pause_btn.w,
+                        pause_btn.h,
                         Color::new(0.0, 0.0, 0.0, alpha),
                     );
 
@@ -605,6 +615,13 @@ async fn main() {
                         "^",
                         thrust_btn.x + thrust_btn.w / 2.0 - small / 2.0,
                         thrust_btn.y + thrust_btn.h / 2.0 + small / 2.0,
+                        small,
+                        WHITE,
+                    );
+                    draw_text(
+                        "PAUSE",
+                        pause_btn.x + pause_btn.w / 2.0 - small / 2.0,
+                        pause_btn.y + pause_btn.h / 2.0 + small / 2.0,
                         small,
                         WHITE,
                     );
@@ -698,7 +715,7 @@ async fn main() {
             GameState::Win => {
                 clear_background(current_palette.background);
                 let base = screen_width().min(screen_height());
-                let fs = base * 0.06;
+                let fs = base * 0.05;
                 let msg = if control_mode == ControlMode::Touch {
                     "You Win! Tap to Move To Next Level"
                 } else {
@@ -712,7 +729,7 @@ async fn main() {
                     fs,
                     current_palette.ship,
                 );
-                if is_key_pressed(KeyCode::Enter) || !touches().is_empty() {
+                if is_key_pressed(KeyCode::Enter) {
                     level_multiplier += 1.0;
                     current_palette = pick_palette_for_level(level_multiplier, &palettes);
                     let (ns, nb, na, nls, _ps) = new_game(level_multiplier, current_palette);
@@ -721,6 +738,19 @@ async fn main() {
                     asteroids = na;
                     last_shot = nls;
                     game_state = GameState::Playing;
+                }
+                for touch in touches() {
+                    if touch.phase == TouchPhase::Started {
+                        level_multiplier += 1.0;
+                        current_palette = pick_palette_for_level(level_multiplier, &palettes);
+                        let (ns, nb, na, nls, _ps) = new_game(level_multiplier, current_palette);
+                        ship = ns;
+                        bullets = nb;
+                        asteroids = na;
+                        last_shot = nls;
+                        game_state = GameState::Playing;
+                        break;
+                    }
                 }
                 next_frame().await;
             }
@@ -736,7 +766,7 @@ async fn main() {
                 let fs = base * 0.05;
                 let fs2 = base * 0.04;
                 let msg = if control_mode == ControlMode::Touch {
-                    "Buttons on bottom allow for rotation and thrust, tapping/holding anywhere else fires!"
+                    "Move with [buttons] ship will autofire."
                 } else {
                     "Move with [arrows] fire with [space]."
                 };
@@ -773,6 +803,7 @@ async fn main() {
                         control_mode = ControlMode::Touch;
                         game_state = GameState::Playing;
                         player_score = ps;
+                        break;
                     }
                 }
                 if is_key_pressed(KeyCode::Enter) {
