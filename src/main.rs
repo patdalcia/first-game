@@ -70,7 +70,7 @@ fn wrap_around(v: &Vec2) -> Vec2 {
 }
 
 fn speed_factor(level_multiplier: f64) -> f32 {
-    1.0 + (level_multiplier as f32) * 0.25
+    1.0 + (level_multiplier as f32) * 0.15
 }
 
 fn sample_palettes() -> Vec<ColorPalette> {
@@ -227,7 +227,7 @@ fn new_game(
     let mut asteroids = Vec::new();
     let center = vec2(screen_width() / 2.0, screen_height() / 2.0);
     let factor = speed_factor(level_multiplier);
-    for _ in 0..(10. + (level_multiplier * 2.)) as u32 {
+    for _ in 0..(5. + (level_multiplier * 2.)) as u32 {
         let base_vel = vec2(rand::gen_range(-1., 1.), rand::gen_range(-1., 1.));
         let norm = if base_vel.length() == 0. {
             vec2(1.0, 0.0)
