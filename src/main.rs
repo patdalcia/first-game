@@ -307,16 +307,13 @@ async fn main() {
                 if is_key_pressed(KeyCode::Enter) {
                     control_mode = ControlMode::Keyboard;
                     game_state = GameState::InfoScreen;
-                }
-                if !touches().is_empty() {
-                    control_mode = ControlMode::Touch;
-                    game_state = GameState::InfoScreen;
-                }
-                for touch in touches() {
-                    if touch.phase == TouchPhase::Started {
-                        control_mode = ControlMode::Touch;
-                        game_state = GameState::InfoScreen;
-                        break;
+                } else {
+                    for touch in touches() {
+                        if touch.phase == TouchPhase::Started {
+                            control_mode = ControlMode::Touch;
+                            game_state = GameState::InfoScreen;
+                            break;
+                        }
                     }
                 }
 
@@ -364,7 +361,6 @@ async fn main() {
                     let right_btn =
                         Rect::new(rotation_btn_w, scr_h - btn_size, rotation_btn_w, btn_size);
                     let thrust_btn = Rect::new(scr_w / 2., scr_h - btn_size, scr_w / 2., btn_size);
-                    let pause_btn = Rect::new(scr_w / 8., btn_size, scr_w / 6., btn_size);
 
                     // Auto fire for touch
                     if now - last_shot > FIRE_RATE {
@@ -388,8 +384,6 @@ async fn main() {
                         } else if thrust_btn.contains(p) {
                             let ang = ship.rot.to_radians();
                             acc = vec2(ang.sin(), -ang.cos()) * 0.25;
-                        } else if pause_btn.contains(p) {
-                            game_state = GameState::Paused;
                         }
 
                         // Uncomment to enable tap to shoot
@@ -554,9 +548,9 @@ async fn main() {
                     let right_btn =
                         Rect::new(rotation_btn_w, scr_h - btn_size, rotation_btn_w, btn_size);
                     let thrust_btn = Rect::new(scr_w / 2.0, scr_h - btn_size, scr_w / 2., btn_size);
-                    let pause_btn = Rect::new(scr_w / 8., 0., scr_w / 6., btn_size);
+                    // let pause_btn = Rect::new(scr_w / 8., 0., scr_w / 6., btn_size);
 
-                    let pause_ts = measure_text("PAUSE", None, fs as u16, 1.0);
+                    // let pause_ts = measure_text("PAUSE", None, fs as u16, 1.0);
 
                     let alpha = 0.1;
                     draw_rectangle(
@@ -580,13 +574,13 @@ async fn main() {
                         thrust_btn.h,
                         Color::new(0.0, 0.0, 0.0, alpha),
                     );
-                    draw_rectangle(
-                        pause_btn.x,
-                        pause_btn.y,
-                        pause_btn.w,
-                        pause_btn.h,
-                        Color::new(0.0, 0.0, 0.0, alpha),
-                    );
+                    // draw_rectangle(
+                    //     pause_btn.x,
+                    //     pause_btn.y,
+                    //     pause_btn.w,
+                    //     pause_btn.h,
+                    //     Color::new(0.0, 0.0, 0.0, alpha),
+                    // );
 
                     draw_rectangle_lines(
                         left_btn.x, left_btn.y, left_btn.w, left_btn.h, 1.0, WHITE,
@@ -630,13 +624,13 @@ async fn main() {
                         small,
                         WHITE,
                     );
-                    draw_text(
-                        "PAUSE",
-                        pause_btn.x + pause_btn.w / 2.0 - small / 2.0,
-                        pause_btn.y + pause_btn.h / 2.0 + small / 2.0,
-                        small,
-                        WHITE,
-                    );
+                    // draw_text(
+                    //     "PAUSE",
+                    //     pause_btn.x + pause_btn.w / 2.0 - small / 2.0,
+                    //     pause_btn.y + pause_btn.h / 2.0 + small / 2.0,
+                    //     small,
+                    //     WHITE,
+                    // );
 
                     let fire_label = "Tap anywhere to FIRE";
                     let ts = measure_text(fire_label, None, fs as u16, 1.0);
@@ -709,7 +703,7 @@ async fn main() {
                     fs2,
                     DARKGRAY,
                 );
-                if is_key_pressed(KeyCode::Enter) || !touches().is_empty() {
+                if is_key_pressed(KeyCode::Enter) {
                     level_multiplier = 1.0;
                     current_palette = pick_palette_for_level(level_multiplier, &palettes);
                     let (ns, nb, na, nls, ps) = new_game(level_multiplier, current_palette);
@@ -719,7 +713,23 @@ async fn main() {
                     last_shot = nls;
                     game_state = GameState::StartMenu;
                     player_score = ps;
+                } else {
+                    for touch in touches() {
+                        if touch.phase == TouchPhase::Started {
+                            level_multiplier = 1.0;
+                            current_palette = pick_palette_for_level(level_multiplier, &palettes);
+                            let (ns, nb, na, nls, ps) = new_game(level_multiplier, current_palette);
+                            ship = ns;
+                            bullets = nb;
+                            asteroids = na;
+                            last_shot = nls;
+                            game_state = GameState::StartMenu;
+                            player_score = ps;
+                            break;
+                        }
+                    }
                 }
+
                 next_frame().await;
             }
 
