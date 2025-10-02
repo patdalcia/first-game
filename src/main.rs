@@ -409,6 +409,7 @@ async fn main() {
 
                 for b in bullets.iter_mut() {
                     b.pos += b.vel;
+                }
                 for a in asteroids.iter_mut() {
                     a.pos += a.vel;
                     a.pos = wrap_around(&a.pos);
@@ -768,7 +769,7 @@ async fn main() {
                 let msg = if control_mode == ControlMode::Touch {
                     "Move with [buttons] ship will autofire."
                 } else {
-                    "Move with [arrows] fire with [space]."
+                    "Move with [wasd] or [arrows] fire with [space]."
                 };
                 let msg2 = if control_mode == ControlMode::Touch {
                     "[Tap Screen To Start Game]"
