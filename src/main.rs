@@ -312,6 +312,13 @@ async fn main() {
                     control_mode = ControlMode::Touch;
                     game_state = GameState::InfoScreen;
                 }
+                for touch in touches() {
+                    if touch.phase == TouchPhase::Started {
+                        control_mode = ControlMode::Touch;
+                        game_state = GameState::InfoScreen;
+                        break;
+                    }
+                }
 
                 next_frame().await;
             }
@@ -541,11 +548,15 @@ async fn main() {
                     let btn_size = scr_w * 0.2;
                     let rotation_btn_w = scr_w / 4.;
 
+                    let fs = screen_width().max(screen_height()) * 0.025;
+
                     let left_btn = Rect::new(0.0, scr_h - btn_size, rotation_btn_w, btn_size);
                     let right_btn =
                         Rect::new(rotation_btn_w, scr_h - btn_size, rotation_btn_w, btn_size);
                     let thrust_btn = Rect::new(scr_w / 2.0, scr_h - btn_size, scr_w / 2., btn_size);
-                    let pause_btn = Rect::new(scr_w / 8., btn_size, scr_w / 6., btn_size);
+                    let pause_btn = Rect::new(scr_w / 8., 0., scr_w / 6., btn_size);
+
+                    let pause_ts = measure_text("PAUSE", None, fs as u16, 1.0);
 
                     let alpha = 0.1;
                     draw_rectangle(
@@ -628,7 +639,6 @@ async fn main() {
                     );
 
                     let fire_label = "Tap anywhere to FIRE";
-                    let fs = screen_width().max(screen_height()) * 0.025;
                     let ts = measure_text(fire_label, None, fs as u16, 1.0);
                     draw_text(
                         fire_label,
