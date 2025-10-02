@@ -357,7 +357,7 @@ async fn main() {
                     let right_btn =
                         Rect::new(rotation_btn_w, scr_h - btn_size, rotation_btn_w, btn_size);
                     let thrust_btn = Rect::new(scr_w / 2., scr_h - btn_size, scr_w / 2., btn_size);
-                    let pause_btn = Rect::new(scr_w / 8., scr_h - btn_size, scr_w / 6., btn_size);
+                    let pause_btn = Rect::new(scr_w / 8., btn_size, scr_w / 6., btn_size);
 
                     // Auto fire for touch
                     if now - last_shot > FIRE_RATE {
@@ -545,7 +545,7 @@ async fn main() {
                     let right_btn =
                         Rect::new(rotation_btn_w, scr_h - btn_size, rotation_btn_w, btn_size);
                     let thrust_btn = Rect::new(scr_w / 2.0, scr_h - btn_size, scr_w / 2., btn_size);
-                    let pause_btn = Rect::new(scr_w / 8., scr_h - btn_size, scr_w / 6., btn_size);
+                    let pause_btn = Rect::new(scr_w / 8., btn_size, scr_w / 6., btn_size);
 
                     let alpha = 0.1;
                     draw_rectangle(
