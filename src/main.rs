@@ -351,9 +351,11 @@ async fn main() {
                     let scr_w = screen_width();
                     let scr_h = screen_height();
                     let btn_size = scr_w * 0.2;
+                    let rotation_btn_w = scr_w / 4.;
 
-                    let left_btn = Rect::new(0.0, scr_h - btn_size, scr_w / 4., btn_size);
-                    let right_btn = Rect::new(scr_w / 4., scr_h - btn_size, scr_w / 4., btn_size);
+                    let left_btn = Rect::new(0.0, scr_h - btn_size, rotation_btn_w, btn_size);
+                    let right_btn =
+                        Rect::new(rotation_btn_w, scr_h - btn_size, rotation_btn_w, btn_size);
                     let thrust_btn = Rect::new(scr_w / 2., scr_h - btn_size, scr_w / 2., btn_size);
 
                     // Auto fire for touch
@@ -379,6 +381,8 @@ async fn main() {
                             let ang = ship.rot.to_radians();
                             acc = vec2(ang.sin(), -ang.cos()) * 0.5;
                         }
+
+                        // Uncomment to enable tap to shoot
                         // else if now - last_shot > FIRE_RATE {
                         //     let ang = ship.rot.to_radians();
                         //     let dir = vec2(ang.sin(), -ang.cos());
@@ -478,6 +482,7 @@ async fn main() {
                 let v2 = back + dir_l * half_base;
                 let v3 = back + dir_r * half_base;
 
+                // Forcing Base Color pallette for first level.
                 if level_multiplier == 1. {
                     clear_background(LIGHTGRAY);
                     for b in bullets.iter() {
@@ -487,7 +492,9 @@ async fn main() {
                         draw_poly_lines(a.pos.x, a.pos.y, a.sides, a.size, a.rot, 2.0, BLACK);
                     }
                     draw_triangle_lines(nose, v2, v3, 2.0, BLACK);
-                } else {
+                }
+                // Random color pallette per level
+                else {
                     clear_background(current_palette.background);
                     for b in bullets.iter() {
                         draw_circle(b.pos.x, b.pos.y, 2.0, current_palette.ship);
@@ -499,15 +506,29 @@ async fn main() {
                 }
 
                 let base = screen_width().min(screen_height());
-                let fs = base * 0.06;
+                let score_and_level_fs = base * 0.04;
+                let alpha = 0.75;
+
+                // Drawing Score
                 let msg = player_score.to_string();
-                let ts = measure_text(msg.as_str(), None, fs as u16, 1.0);
+                let ts = measure_text(msg.as_str(), None, score_and_level_fs as u16, 1.0);
                 draw_text(
                     msg.as_str(),
                     screen_width() / 4.0,
                     ts.height * 2.0,
-                    fs,
-                    DARKGRAY,
+                    score_and_level_fs,
+                    DARKGRAY.with_alpha(alpha),
+                );
+
+                // Drawing Level
+                let msg = format!("Level: {level_multiplier}");
+                let ts = measure_text(msg.as_str(), None, score_and_level_fs as u16, 1.0);
+                draw_text(
+                    msg.as_str(),
+                    screen_width() * 0.75,
+                    ts.height * 2.0,
+                    score_and_level_fs,
+                    DARKGRAY.with_alpha(alpha),
                 );
 
                 // Drawing touch controls
@@ -515,9 +536,11 @@ async fn main() {
                     let scr_w = screen_width();
                     let scr_h = screen_height();
                     let btn_size = scr_w * 0.2;
+                    let rotation_btn_w = scr_w / 4.;
 
-                    let left_btn = Rect::new(0.0, scr_h - btn_size, scr_w / 4., btn_size);
-                    let right_btn = Rect::new(btn_size, scr_h - btn_size, btn_size, btn_size);
+                    let left_btn = Rect::new(0.0, scr_h - btn_size, rotation_btn_w, btn_size);
+                    let right_btn =
+                        Rect::new(rotation_btn_w, scr_h - btn_size, rotation_btn_w, btn_size);
                     let thrust_btn = Rect::new(scr_w / 2.0, scr_h - btn_size, scr_w / 2., btn_size);
 
                     let alpha = 0.1;
